@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Military Crisis Simulation</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --text-color: #33ff33;
+            --border-color: #1a1a1a;
+            --header-bg: #111111;
+            --secret-color: #ff3366;
+            --emotional-state-color: #888888;
+            --scanline-opacity: 0.15;
+            --scanline-width: 2px;
+            --flicker-opacity: 0.15;
+            --crt-curve: 2deg;
+        }
+
+        @font-face {
+            font-family: 'VT323';
+            src: url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'VT323', 'Courier New', monospace;
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* CRT screen effect */
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(18, 16, 16, 0) 50%,
+                rgba(0, 0, 0, 0.25) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 2;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+            opacity: var(--scanline-opacity);
+        }
+
+        /* Scanline effect */
+        body::after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: rgba(18, 16, 16, 0.1);
+            opacity: 0;
+            z-index: 2;
+            pointer-events: none;
+            animation: flicker 0.15s infinite;
+        }
+
+        @keyframes flicker {
+            0% { opacity: var(--flicker-opacity); }
+            50% { opacity: var(--flicker-opacity) * 0.5; }
+            100% { opacity: var(--flicker-opacity); }
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 2px solid var(--text-color);
+            text-shadow: 0 0 10px var(--text-color);
+            font-size: 1.5em;
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-family: 'VT323', monospace;
+            transform: skew(-5deg);
+            text-transform: uppercase;
+        }
+
+        .status-bar {
+            background-color: var(--header-bg);
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid var(--text-color);
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 5px var(--text-color);
+            letter-spacing: 1px;
+        }
+
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            border: 2px solid var(--text-color);
+            margin: 10px;
+            border-radius: 5px;
+        }
+
+        .terminal {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .terminal::-webkit-scrollbar {
+            width: 12px;
+            background-color: var(--bg-color);
+        }
+
+        .terminal::-webkit-scrollbar-thumb {
+            background-color: var(--text-color);
+            border: 3px solid var(--bg-color);
+            border-radius: 6px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--header-bg);
+            padding: 1rem;
+            border-left: 2px solid var(--text-color);
+            font-family: 'VT323', monospace;
+        }
+
+        .agent-list {
+            list-style: none;
+        }
+
+        .agent-item {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid var(--text-color);
+            border-radius: 0;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .agent-item::before {
+            content: ">";
+            position: absolute;
+            left: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .agent-item:hover::before {
+            opacity: 1;
+        }
+
+        .agent-item:hover {
+            background-color: rgba(51, 255, 51, 0.1);
+            transform: translateX(5px);
+        }
+
+        .message {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            animation: fadeIn 0.3s ease-in;
+            position: relative;
+            font-family: 'VT323', monospace;
+            letter-spacing: 1px;
+        }
+
+        .event {
+            color: #ffff33;
+            border-left: 2px solid #ffff33;
+            padding-left: 1rem;
+            margin: 1rem 0;
+            background-color: rgba(255, 255, 51, 0.05);
+            position: relative;
+        }
+
+        .event::before {
+            content: "[!]";
+            position: absolute;
+            left: -30px;
+            color: #ffff33;
+        }
+
+        .secret {
+            color: var(--secret-color);
+            border-left: 2px solid var(--secret-color);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            background-color: rgba(255, 51, 102, 0.05);
+            font-style: italic;
+            position: relative;
+        }
+
+        .secret::before {
+            content: "[*]";
+            position: absolute;
+            left: -30px;
+            color: var(--secret-color);
+        }
+
+        .conversation {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid var(--text-color);
+            border-radius: 0;
+            background-color: rgba(51, 255, 51, 0.02);
+            position: relative;
+        }
+
+        .conversation::before {
+            content: "COMM-LOG";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background-color: var(--bg-color);
+            padding: 0 5px;
+            font-size: 0.8em;
+            color: var(--text-color);
+        }
+
+        .conversation-header {
+            color: #ffaa33;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(255, 170, 51, 0.5);
+            letter-spacing: 2px;
+        }
+
+        .chat-message {
+            display: flex;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+            border-left: 2px solid transparent;
+            position: relative;
+        }
+
+        .chat-message::before {
+            content: ">";
+            position: absolute;
+            left: -15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .chat-message:hover::before {
+            opacity: 1;
+        }
+
+        .chat-message:hover {
+            background-color: rgba(51, 255, 51, 0.05);
+        }
+
+        .typing-indicator {
+            color: var(--emotional-state-color);
+            font-style: italic;
+            padding: 0.5rem;
+            animation: blink 1s infinite;
+            margin-left: 220px;
+            border-left: 2px solid var(--border-color);
+            padding-left: 1rem;
+            font-family: 'VT323', monospace;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Keep existing agent colors but add retro effects */
+        [class*="agent-"] {
+            position: relative;
+            text-shadow: 0 0 5px currentColor;
+        }
+
+        [class*="agent-"]::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                transparent 50%,
+                rgba(0, 0, 0, 0.15) 50%
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        /* Agent colors with text shadows */
+        .agent-Col-James-Sterling, 
+        .agent-Col-James-Sterling .agent-name,
+        .agent-Col-James-Sterling.agent-name { 
+            color: #ffd700; 
+            text-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+        
+        .agent-Dr-Victoria-Harrison,
+        .agent-Dr-Victoria-Harrison .agent-name,
+        .agent-Dr-Victoria-Harrison.agent-name { 
+            color: #ff69b4; 
+            text-shadow: 0 0 5px rgba(255, 105, 180, 0.5);
+        }
+        
+        .agent-Dr-Wei-Chen,
+        .agent-Dr-Wei-Chen .agent-name,
+        .agent-Dr-Wei-Chen.agent-name { 
+            color: #00ff00; 
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+        
+        .agent-Major-Sarah-Brooks,
+        .agent-Major-Sarah-Brooks .agent-name,
+        .agent-Major-Sarah-Brooks.agent-name { 
+            color: #9370db; 
+            text-shadow: 0 0 5px rgba(147, 112, 219, 0.5);
+        }
+        
+        .agent-Capt-Miguel-Rodriguez,
+        .agent-Capt-Miguel-Rodriguez .agent-name,
+        .agent-Capt-Miguel-Rodriguez.agent-name { 
+            color: #ff4500; 
+            text-shadow: 0 0 5px rgba(255, 69, 0, 0.5);
+        }
+        
+        .agent-Lt-Min-Zhang,
+        .agent-Lt-Min-Zhang .agent-name,
+        .agent-Lt-Min-Zhang.agent-name { 
+            color: #00ffff; 
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+        
+        .agent-Lt-John-Smith,
+        .agent-Lt-John-Smith .agent-name,
+        .agent-Lt-John-Smith.agent-name { 
+            color: #ffa500; 
+            text-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
+        }
+        
+        .agent-Dr-Sarah-Carter,
+        .agent-Dr-Sarah-Carter .agent-name,
+        .agent-Dr-Sarah-Carter.agent-name { 
+            color: #ee82ee; 
+            text-shadow: 0 0 5px rgba(238, 130, 238, 0.5);
+        }
+
+        /* Add colored borders to chat messages */
+        .chat-message.agent-Col-James-Sterling { border-left-color: #ffd700; }
+        .chat-message.agent-Dr-Victoria-Harrison { border-left-color: #ff69b4; }
+        .chat-message.agent-Dr-Wei-Chen { border-left-color: #00ff00; }
+        .chat-message.agent-Major-Sarah-Brooks { border-left-color: #9370db; }
+        .chat-message.agent-Capt-Miguel-Rodriguez { border-left-color: #ff4500; }
+        .chat-message.agent-Lt-Min-Zhang { border-left-color: #00ffff; }
+        .chat-message.agent-Lt-John-Smith { border-left-color: #ffa500; }
+        .chat-message.agent-Dr-Sarah-Carter { border-left-color: #ee82ee; }
+
+        /* Add colored borders to agent list items */
+        .agent-item.agent-Col-James-Sterling { border-left-color: #ffd700; }
+        .agent-item.agent-Dr-Victoria-Harrison { border-left-color: #ff69b4; }
+        .agent-item.agent-Dr-Wei-Chen { border-left-color: #00ff00; }
+        .agent-item.agent-Major-Sarah-Brooks { border-left-color: #9370db; }
+        .agent-item.agent-Capt-Miguel-Rodriguez { border-left-color: #ff4500; }
+        .agent-item.agent-Lt-Min-Zhang { border-left-color: #00ffff; }
+        .agent-item.agent-Lt-John-Smith { border-left-color: #ffa500; }
+        .agent-item.agent-Dr-Sarah-Carter { border-left-color: #ee82ee; }
+
+        .agent-name {
+            margin-right: 1rem;
+            min-width: 200px;
+            text-align: right;
+            position: relative;
+        }
+
+        .message-content {
+            flex: 1;
+            padding-left: 1rem;
+            border-left: 2px solid var(--border-color);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <span>Hour: <span id="current-hour">0</span>/24</span>
+        <span>Global Tension: <span id="tension-level">0.0</span></span>
+        <span>Security Level: <span id="security-level">0.0</span></span>
+    </div>
+
+    <div class="main-container">
+        <div class="terminal" id="terminal"></div>
+        <div class="sidebar">
+            <h3>Active Agents</h3>
+            <ul class="agent-list" id="agent-list"></ul>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="simulation.js"></script>
+</body>
+</html> 
