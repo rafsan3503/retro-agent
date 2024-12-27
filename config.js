@@ -1,6 +1,11 @@
+// Define a global variable to store environment variables
+window.ENV = window.ENV || {
+    OPENROUTER_API_KEY: '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'
+};
+
 const CONFIG = {
     API_URL: 'https://openrouter.ai/api/v1/chat/completions',
-    OPENROUTER_API_KEY: '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',
+    OPENROUTER_API_KEY: window.ENV.OPENROUTER_API_KEY,
     DEFAULT_MODEL: 'mistralai/mistral-7b-instruct',  // Changed to a valid model
     SIMULATION_SPEED: {
         HOUR_DURATION: 300000, // 5 minutes in milliseconds
@@ -11,4 +16,6 @@ const CONFIG = {
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = CONFIG;
+} else {
+    window.CONFIG = CONFIG;  // Make CONFIG available globally in browser
 } 
