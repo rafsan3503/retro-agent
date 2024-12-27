@@ -12,9 +12,9 @@
             --header-bg: #111111;
             --secret-color: #ff3366;
             --emotional-state-color: #888888;
-            --scanline-opacity: 0.15;
+            --scanline-opacity: 0.07;
             --scanline-width: 2px;
-            --flicker-opacity: 0.15;
+            --flicker-opacity: 0;
             --crt-curve: 2deg;
         }
 
@@ -41,7 +41,7 @@
             overflow: hidden;
         }
 
-        /* CRT screen effect */
+        /* CRT screen effect - static version */
         body::before {
             content: " ";
             display: block;
@@ -58,30 +58,18 @@
             background-size: 100% 4px;
             z-index: 2;
             pointer-events: none;
-            animation: flicker 0.15s infinite;
             opacity: var(--scanline-opacity);
         }
 
-        /* Scanline effect */
+        /* Remove the flickering after effect */
         body::after {
-            content: " ";
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: rgba(18, 16, 16, 0.1);
-            opacity: 0;
-            z-index: 2;
-            pointer-events: none;
-            animation: flicker 0.15s infinite;
+            display: none;
         }
 
+        /* Remove the flicker animation */
         @keyframes flicker {
-            0% { opacity: var(--flicker-opacity); }
-            50% { opacity: var(--flicker-opacity) * 0.5; }
-            100% { opacity: var(--flicker-opacity); }
+            0% { opacity: var(--scanline-opacity); }
+            100% { opacity: var(--scanline-opacity); }
         }
 
         .header {
